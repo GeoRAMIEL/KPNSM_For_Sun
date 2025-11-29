@@ -11,7 +11,7 @@ from pytorch_msssim import ssim
 
 def evaluate(step, orig_model, config, val_log_dir, logger, valDataloader, device, half=False, prefix=""):
     os.makedirs(val_log_dir, exist_ok=False)
-    print(f"evaluating! precision={"half" if half else "float"}")
+    print(f"evaluating! precision={'half' if half else 'float'}")
     dataset_config = config["dataset"]
     filter_config = config["filter"]
     val_use_temporal = dataset_config.get("val_use_temporal", False)

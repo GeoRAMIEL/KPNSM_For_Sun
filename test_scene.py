@@ -45,7 +45,7 @@ def test(args):
 
     now = datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = f"{config.get("output_dir", "test")}/{run_name}_{timestamp}"
+    log_dir = f"{config.get('output_dir', 'test')}/{run_name}_{timestamp}"
     os.makedirs(log_dir, exist_ok=False)
 
     with open(os.path.join(log_dir, "config.yaml"), 'w') as file:
@@ -82,7 +82,7 @@ def test(args):
     model.eval()
     with torch.no_grad():
         for val_input_dict in valDataloader:
-            print(f"get scene {val_input_dict["scene"][0]}, id {val_input_dict["scene_id"][0]}, repetition {val_input_dict["repetition_id"][0]}")
+            print(f"get scene {val_input_dict['scene'][0]}, id {val_input_dict['scene_id'][0]}, repetition {val_input_dict['repetition_id'][0]}")
             idx = val_input_dict["scene_id"][0]
             rep_idx = val_input_dict["repetition_id"][0]
             

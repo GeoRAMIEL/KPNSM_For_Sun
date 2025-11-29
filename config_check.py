@@ -14,11 +14,11 @@ def check_config(runname, config):
   elif filter_config["filter_size"] == 5:
     assert "filter5" in args
     assert filter_config["dilation"] in [2, 3, 4]
-    assert f"dilation{filter_config["dilation"]}" in args
+    assert f"dilation{filter_config['dilation']}" in args
   else: # big kernel
     assert filter_config["filter_size"] in [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 29, 31]
     assert filter_config["dilation"] == 0
-    assert f"filter{filter_config["filter_size"]}" in args
+    assert f"filter{filter_config['filter_size']}" in args
   
   # check msm
   msm = config["dataset"]["configs"]["use_msm"]
@@ -55,7 +55,7 @@ def check_config(runname, config):
     for w in temporal_loss_weight_dict:
       assert f"tl1vgg{w}" not in args and f"tl1{w}" not in args
   else:
-    assert f"t{config["temporal_loss"]["type"]}{config["temporal_weight"] }" in args
+    assert f"t{config['temporal_loss']['type']}{config['temporal_weight'] }" in args
     if config["temporal_loss"]["proj"] == True:
       assert "proj" in args
     else:
@@ -69,7 +69,7 @@ def check_config(runname, config):
   # check model
   model_config = config["model"]
   assert model_config["layer_num"] in [3, 4, 5]
-  assert f"layer{model_config["layer_num"]}" in args
+  assert f"layer{model_config['layer_num']}" in args
   assert model_config["up"] == "transconv" and model_config["down"] == "maxpool"
   assert model_config["less_channel"] == False and model_config["light_conv"] == False
   assert model_config["skip"] == "add"
@@ -103,7 +103,7 @@ def check_config(runname, config):
     assert "smalllr" in args
   assert config["training"]["train_batch_accum"] == 4
   if config["training"]["train_batch_size"] != 2:
-    assert f"batch{config["training"]["train_batch_size"]}" in args
+    assert f"batch{config['training']['train_batch_size']}" in args
   
   # check val
   assert config["val"]["val_batch_size"] in [2, 3]
@@ -111,4 +111,4 @@ def check_config(runname, config):
 
   if "gradient_clip" in config["training"]:
     if config["training"]["gradient_clip"] > 0:
-      assert f"clip{config["training"]["gradient_clip"]}" in args
+      assert f"clip{config['training']['gradient_clip']}" in args
