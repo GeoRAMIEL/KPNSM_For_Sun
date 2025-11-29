@@ -167,7 +167,7 @@ def test(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Training configuration.")
-    parser.add_argument('--config', type=str, default="config/evaluate.yaml", help='Path to the YAML configuration file.')
+    parser.add_argument('--config', type=str, default="config/test_feature_match.yaml", help='Path to the YAML configuration file.')
     args = parser.parse_args()
 
     test(args)

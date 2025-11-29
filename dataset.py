@@ -53,7 +53,8 @@ coefs = {
     'bathroom': 4.0,
     'bathroom2': 4.0,
     'deadtree': 6.0,
-    'window': 10.0
+    'window': 10.0,
+    'cornell_box_bunny': 4.0,
 }
 
 # for testing

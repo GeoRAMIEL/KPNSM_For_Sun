@@ -3,6 +3,7 @@ data/
 output/
 exports/
 tests/
+test/
 video/
 
 # Byte-compiled / optimized / DLL files
