@@ -112,11 +112,21 @@ class NSSMDataset(Dataset):
         #    self.len = self.len // 2
         # use gt folder to determine length (file num in gt folder = length)
         self.len = 0
+        self.data_indices = []
         for entry in os.listdir(gt_folder):
             full_path = os.path.join(gt_folder, entry)
             # only count .exr files that match the pattern
             if os.path.isfile(full_path) and entry.startswith('Mogwai.ShadowDenoiser.output') and entry.endswith('.exr'):
-                self.len += 1
+                # extract the number before .exr
+                num_of_data_str = entry[len('Mogwai.ShadowDenoiser.output.'):-len('.exr')]
+                num_of_data = int(num_of_data_str) / gt_index_multiplier
+                self.data_indices.append(num_of_data)
+        self.data_indices = sorted(self.data_indices)
+        if data_range is not None:
+                l, r = data_range
+                assert l >= 0 and l < r and r <= len(self.data_indices)
+                self.data_indices = self.data_indices[l:r]
+        self.len = len(self.data_indices)
 
         #self.penumbra_clamp = penumbra_clamp
         self.use_msm = use_msm
@@ -158,33 +168,35 @@ class NSSMDataset(Dataset):
         #coef = coefs[scene_name]
         coef = coefs["emerald_square"]
 
-        #normW = read_exr_data(folder_path, 'Mogwai.MyGBuffer.normW.15', ['R', 'G', 'B'])
-        
-        #posW = read_exr_data(folder_path, 'Mogwai.MyGBuffer.posW.15', ['R', 'G', 'B'], coef)
+        # TODO: add normal and worldPos if needed in future
+        #normW = read_exr_data(folder_path, 'Mogwai.GBuffer.normW.15', ['R', 'G', 'B'])
+        #posW = read_exr_data(folder_path, 'Mogwai.GBuffer.posW.15', ['R', 'G', 'B'], coef)
 
-        distRtoB = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distRtoB.{idx}', ['R'], coef)
-        distVtoR = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distVtoR.{idx}', ['R'], coef)
-        stdDev = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedShadowDepthStd.{idx}', ['R','G'], coef)
-        shadowMap = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.shadowMask.{idx}', ['R'])
-        ce = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.ce.{idx}', ['R'])
-        cv = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.cv.{idx}', ['R'])
+        data_idx = self.data_indices[idx]
 
-        gt_index = idx * self.gt_index_multiplier
+        distRtoB = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distRtoB.{data_idx}', ['R'], coef)
+        distVtoR = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distVtoR.{data_idx}', ['R'], coef)
+        stdDev = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedShadowDepthStd.{data_idx}', ['R','G'], coef)
+        shadowMap = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.shadowMask.{data_idx}', ['R'])
+        ce = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.ce.{data_idx}', ['R'])
+        cv = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.cv.{data_idx}', ['R'])
+
+        gt_index = data_idx * self.gt_index_multiplier
         gt = read_exr_data(self.gt_folder, f'Mogwai.ShadowDenoiser.output.{gt_index}', ['R'])
 
         #info = self.parse_run_info(folder_path, coef)
 
-        mask = distRtoB != 0
+        mask = distRtoB != 0 # we don't care about pixels that are not in shadow receiver
         H, W = gt.shape[-2:]
 
         # replace kpnsm penumbra width with Shadow depth divergence map
         # this is already normalized
-        shadowDvg = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedDivergenceMap.{idx}', ['R'])
+        shadowDvg = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedDivergenceMap.{data_idx}', ['R'])
 
         res = {
-            #"scene": self.scenes.index(scene_name), 
-            #"scene_id": scene_id,
-            "id": idx,
+            "scene": 0,  # dummy scene id
+            "scene_id": 0,
+            "id": data_idx,
             #"posW": posW,
             #"normW": normW,
             "distVtoR": distVtoR,
