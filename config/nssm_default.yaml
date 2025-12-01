@@ -1,4 +1,5 @@
 ckpt: '/workspace/develop/KPNSM_For_Sun/checkpoints/ours_enhanced.pth'
+using_kpnsm_ckpt: true
 dataset:
   configs:
     cv_div_d: true # whether to divide input cv by depth

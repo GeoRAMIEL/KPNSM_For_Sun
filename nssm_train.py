@@ -27,7 +27,14 @@ def nssm_train(args):
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
     run_name = config["name"]
-    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+    
+    # device fallback: cuda -> mps -> cpu
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
 
     now = datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
@@ -58,6 +65,7 @@ def nssm_train(args):
     if "ckpt" in config:
         model.load_state_dict(torch.load(config["ckpt"]))
         print("loading ckpt from", config["ckpt"])
+    using_kpnsm_ckpt = config.get("using_kpnsm_ckpt", False)
     model = model.to(device)
     print("number of parameters:", sum(p.numel() for p in model.parameters()))
     """
@@ -97,8 +105,11 @@ def nssm_train(args):
     running_cnt = 0
     step = 0
     if "ckpt" in config:
-        step = int(os.path.split(config["ckpt"])[-1][5:-4])
-        print("resuming from step", step)
+        if using_kpnsm_ckpt:
+            print("Starting fresh training from KPNSM checkpoint")
+        else:
+            step = int(os.path.split(config["ckpt"])[-1][5:-4])
+            print("resuming from step", step)
     model.train()
     ep = 0
     while step < max_step:

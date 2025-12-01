@@ -141,7 +141,7 @@ class NSSMDataset(Dataset):
         #    assert not video_order
         self.cv_div_d = cv_div_d
         #self.penumbra_width_choice = penumbra_width_choice # not using this
-        print(f"Loading Dataset with scenes {self.scenes}, in total {self.len} data")
+        #print(f"Loading Dataset with scenes {self.scenes}, in total {self.len} data")
     
     def __len__(self):
         return self.len
@@ -222,12 +222,14 @@ class NSSMDataset(Dataset):
         return self.mygetitem(idx, False)
 
 if __name__ == "__main__":
-    
-# --------start penumbra width--------
     ### calculate 95 percent large
-    scenes = ["classroom", "kitchen", "living-room", "staircase", "living-room-2"]
-    dataset = NSSMDataset('/data/', '/data/mogwai_gt_renders', gt_index_multiplier=10, use_temporal=False,
-                          data_range=[0, 100], use_msm=False, use_temporal=False, temporal_group_num=2)
+    #scenes = ["classroom", "kitchen", "living-room", "staircase", "living-room-2"]
+    scenes = ["emerald_square"]
+    dataset = NSSMDataset(
+        '/data/nssm_data/validation/mogwai_feature_renders', 
+        '/data/nssm_data/validation/mogwai_gt_renders',
+        gt_index_multiplier=10, use_temporal=False, data_range=[0, 100], 
+        use_msm=False, use_temporal=False, temporal_group_num=2)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=16)
 
     hist = np.zeros((len(1), 1000), dtype=np.float32)
