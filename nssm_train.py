@@ -1,9 +1,6 @@
 import torch
-from model import create_model
 from loss import create_loss, create_temporal_loss
-from nssm_dataset import NSSMDataset
 from knsm_utils import save_image, save_kernel, apply_kernel, expand_kernels, save_dilated_kernels, dilation_kernel_actual_size, reconstruct_full_kernel, visualize_and_save_difference, find_good_pixel_with_penumbra
-from config_check import check_config
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 import torch.nn as nn
@@ -20,14 +17,17 @@ import os
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 from temporal import depth_tolerance, normal_tolerance
-from evaluate import evaluate
+from nssm_model import create_model
+from nssm_dataset import NSSMDataset
+from nssm_config_check import check_config
+from nssm_evaluate import evaluate
 
 def nssm_train(args):
     print(f"config file: {args.config}")
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
     run_name = config["name"]
-    
+
     # device fallback: cuda -> mps -> cpu
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
@@ -94,7 +94,8 @@ def nssm_train(args):
     valDataloader = DataLoader(validation, batch_size=config["val"]["val_batch_size"], shuffle=False, num_workers=dataset_config["val_workers"])
 
     max_step = config["training"].get("max_step", 1000000000)
-    train_accum = config.get("train_batch_accum", 1)
+    train_accum = config["training"].get("train_batch_accum", 1)
+    train_batch_size = config["training"].get("train_batch_size", 1)
     optimizer = Adam(model.parameters(), config["training"]["learning_rate"] / train_accum)
     scheduler = MultiStepLR(optimizer, milestones=[20000, 40000, 80000], gamma=0.1)
     gradient_clip = config["training"].get("gradient_clip", 0.0) # 0.0 for no clipping
@@ -112,10 +113,12 @@ def nssm_train(args):
             print("resuming from step", step)
     model.train()
     ep = 0
+    num_epochs = (max_step - step - 1) // len(dataloader) + 1
+    print("Total number of epochs:", num_epochs)
     while step < max_step:
         print("Epoch", ep)
-        ep += 1
-        for input_dict in dataloader:
+        training_loop = tqdm(dataloader)
+        for input_dict in training_loop:
             if use_temporal:
             #    model.eval()
             #    with torch.no_grad():
@@ -200,7 +203,8 @@ def nssm_train(args):
 
             ce = input_dict["ce"]
             cv = input_dict["cv"]
-            shadowStdDev = input_dict["stdDev"]
+            shadowStdDev1 = input_dict["stdDev1"]
+            shadowStdDev2 = input_dict["stdDev2"]
             depthDiff = input_dict["distRtoB"] # depthDiff = dist(receiver, blocker)
             distVtoR = input_dict["distVtoR"]
             gt = input_dict["gt"].to(device)
@@ -214,7 +218,7 @@ def nssm_train(args):
                 optimizer.zero_grad()
             
             # NSSM input features
-            x = [ce, cv, distVtoR, shadowDvg, depthDiff, shadowStdDev[0], shadowStdDev[1], shadowMap]
+            x = [ce, cv, distVtoR, shadowDvg, depthDiff, shadowStdDev1, shadowStdDev2, shadowMap]
             x = torch.cat(x, dim=1).to(device)
 
             if filter_size > 1:
@@ -260,7 +264,7 @@ def nssm_train(args):
                 running_loss_base_avg = running_loss_base / running_cnt
                 running_loss_temporal_avg = running_loss_temporal / running_cnt
                 running_time_avg = (time.time() - running_start) / running_cnt
-                print(f"step {step}, running_loss = {running_loss_avg} running_loss_base = {running_loss_base_avg}, running_loss_temporal = {running_loss_temporal_avg}, speed={running_time_avg} per cnt")
+                #print(f"step {step}, running_loss = {running_loss_avg} running_loss_base = {running_loss_base_avg}, running_loss_temporal = {running_loss_temporal_avg}, speed={running_time_avg} per cnt")
                 running_cnt = 0
                 running_loss = 0.0
                 running_loss_base = 0.0
@@ -274,14 +278,20 @@ def nssm_train(args):
             if step == 1: # save a dummy model
                 torch.save(model.state_dict(), os.path.join(log_dir, f"model{step}.pth"))
 
-            if step % config["val"]["val_frequency"] == 0:
-                torch.save(model.state_dict(), os.path.join(log_dir, f"model{step}.pth"))
+            training_loop.set_description(f"Epoch [{ep+1}/{num_epochs}]")
+            training_loop.set_postfix(train_loss=total_loss.item())
 
-                val_log_dir_h = os.path.join(log_dir, f"{step}half")
-                evaluate(step, model, config, val_log_dir_h, logger, valDataloader, device, half=True, prefix="half")
-            
-            if step >= max_step:
+            if step > max_step:
                 break
+        
+        ep += 1
+        # validate every <val_frequency> epochs
+        if ep % config["val"]["val_frequency"] == 0:
+            torch.save(model.state_dict(), os.path.join(log_dir, f"model{step}.pth"))
+
+            val_log_dir_h = os.path.join(log_dir, f"{step}half")
+            evaluate(step, model, config, val_log_dir_h, logger, valDataloader, device, half=True, prefix="half")
+
 
 
 if __name__ == "__main__":

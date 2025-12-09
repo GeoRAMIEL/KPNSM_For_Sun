@@ -119,13 +119,13 @@ class NSSMDataset(Dataset):
             if os.path.isfile(full_path) and entry.startswith('Mogwai.ShadowDenoiser.output') and entry.endswith('.exr'):
                 # extract the number before .exr
                 num_of_data_str = entry[len('Mogwai.ShadowDenoiser.output.'):-len('.exr')]
-                num_of_data = int(num_of_data_str) / gt_index_multiplier
+                num_of_data = int(num_of_data_str) // gt_index_multiplier
                 self.data_indices.append(num_of_data)
         self.data_indices = sorted(self.data_indices)
         if data_range is not None:
-                l, r = data_range
-                assert l >= 0 and l < r and r <= len(self.data_indices)
-                self.data_indices = self.data_indices[l:r]
+            l, r = data_range
+            assert l >= 0 and l < r and r <= len(self.data_indices)
+            self.data_indices = self.data_indices[l:r]
         self.len = len(self.data_indices)
 
         #self.penumbra_clamp = penumbra_clamp
@@ -173,10 +173,12 @@ class NSSMDataset(Dataset):
         #posW = read_exr_data(folder_path, 'Mogwai.GBuffer.posW.15', ['R', 'G', 'B'], coef)
 
         data_idx = self.data_indices[idx]
+        #print("Loading data index:", data_idx)
 
         distRtoB = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distRtoB.{data_idx}', ['R'], coef)
         distVtoR = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.distVtoR.{data_idx}', ['R'], coef)
-        stdDev = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedShadowDepthStd.{data_idx}', ['R','G'], coef)
+        stdDev1 = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedShadowDepthStd.{data_idx}', ['R'], coef)
+        stdDev2 = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedShadowDepthStd.{data_idx}', ['G'], coef)
         shadowMap = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.shadowMask.{data_idx}', ['R'])
         ce = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.ce.{data_idx}', ['R'])
         cv = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.cv.{data_idx}', ['R'])
@@ -193,6 +195,19 @@ class NSSMDataset(Dataset):
         # this is already normalized
         shadowDvg = read_exr_data(self.feature_folder, f'Mogwai.NSSMFeaturePass.projectedDivergenceMap.{data_idx}', ['R'])
 
+        # debug data dimensions
+        #print("distRtoB shape:", distRtoB.shape)
+        #print("distVtoR shape:", distVtoR.shape)
+        #print("shadowMap shape:", shadowMap.shape)
+        #print("ce shape:", ce.shape)
+        #print("cv shape:", cv.shape)
+        #print("gt shape:", gt.shape)
+        #print("mask shape:", mask.shape)
+        #print("stdDev1 shape:", stdDev1.shape)
+        #print("stdDev2 shape:", stdDev2.shape)
+        #print("shadowDvg shape:", shadowDvg.shape)
+        #print("H, W:", H, W)
+
         res = {
             "scene": 0,  # dummy scene id
             "scene_id": 0,
@@ -207,7 +222,8 @@ class NSSMDataset(Dataset):
             #"info": info,
             "gt": gt,
             "mask": mask,
-            "stdDev": stdDev, # this has two channels
+            "stdDev1": stdDev1,
+            "stdDev2": stdDev2,
             "shadowDvg": shadowDvg,
         }
             
@@ -229,7 +245,7 @@ if __name__ == "__main__":
         '/data/nssm_data/validation/mogwai_feature_renders', 
         '/data/nssm_data/validation/mogwai_gt_renders',
         gt_index_multiplier=10, use_temporal=False, data_range=[0, 100], 
-        use_msm=False, use_temporal=False, temporal_group_num=2)
+        use_msm=False, temporal_group_num=2)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=16)
 
     hist = np.zeros((len(1), 1000), dtype=np.float32)

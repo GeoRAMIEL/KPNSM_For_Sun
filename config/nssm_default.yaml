@@ -1,5 +1,6 @@
-ckpt: '/workspace/develop/KPNSM_For_Sun/checkpoints/ours_enhanced.pth'
-using_kpnsm_ckpt: true
+#ckpt: '/workspace/develop/KPNSM_For_Sun/checkpoints/ours_enhanced.pth'
+ckpt: '/workspace/develop/KPNSM_For_Sun/output/run_sm_vgg0.1_vgg1.0_filter5_dilation3_layer4_2025-12-01_07-32-22/model30000.pth'
+using_kpnsm_ckpt: false
 dataset:
   configs:
     cv_div_d: true # whether to divide input cv by depth
@@ -38,17 +39,18 @@ model:
   light_conv: false
   skip: add
   up: transconv
-name: run_sm_vgg0.1_tl1vgg1.0_proj_wsqrt_filter5_dilation3_layer4
+name: run_sm_smalllr_vgg0.1_vgg1.0_filter5_dilation3_layer4
 pixel_shuffle: true # use a lightweight Unet called PixelShuffleUnet
 temporal_loss:
   proj: true # motion vector alignment
   type: l1vgg
 temporal_weight: 0.0 # temporal loss weight
 training:
-  learning_rate: 0.001
-  max_step: 100000000000
+  learning_rate: 0.0001
+  #max_step: 100,000,000,000
+  max_step: 60000
   train_batch_accum: 4 # step() every 4 steps
   train_batch_size: 2
 val:
   val_batch_size: 2
-  val_frequency: 5000
+  val_frequency: 1 # validate frequency in epochs

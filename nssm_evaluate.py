@@ -103,7 +103,8 @@ def evaluate(step, orig_model, config, val_log_dir, logger, valDataloader, devic
 
             ce = val_input_dict["ce"]
             cv = val_input_dict["cv"]
-            shadowStdDev = val_input_dict["stdDev"]
+            shadowStdDev1 = val_input_dict["stdDev1"]
+            shadowStdDev2 = val_input_dict["stdDev2"]
             depthDiff = val_input_dict["distRtoB"] # depthDiff = dist(receiver, blocker)
             distVtoR = val_input_dict["distVtoR"]
             gt = val_input_dict["gt"].to(device)
@@ -113,7 +114,7 @@ def evaluate(step, orig_model, config, val_log_dir, logger, valDataloader, devic
 
             B, _, H, W = ce.shape
 
-            feat = [ce, cv, distVtoR, shadowDvg, depthDiff, shadowStdDev[0], shadowStdDev[1], shadowMap]
+            feat = [ce, cv, distVtoR, shadowDvg, depthDiff, shadowStdDev1, shadowStdDev2, shadowMap]
             feat = torch.cat(feat, dim=1).to(device)
             
             if half:
